@@ -4,9 +4,13 @@ This is a Swift conversion using SpriteBuilder 1.3.1 of the classic [Peeved Peng
 
 Support has been added for the Mac target which is a great way to quickly test your project.
 
-**Issues:**
+Remeber to publish this in SpriteBuilder before running in Xcode :)
 
-There are a couple of Mac issues that have come up in 1.3.1 however they have been hot patched in this project.
+**Important:**
+
+Please don't upgrade this Project if asked just yet in SpriteBuilder as it contains a few fixes that may not be included just yet in SB at time of writing this.
+
+A few Mac patches have been applied and some new CCBReader code.
 
 **Notes:**
 
