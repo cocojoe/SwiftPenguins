@@ -1317,6 +1317,33 @@ static inline float readFloat(CCBReader *self)
     
 }
 
+// I cannot believe there isn't a stdlib way to do this...
+static SEL
+SelectorNameForProperty(objc_property_t property)
+{
+    char *customSetterName = property_copyAttributeValue(property, "S");
+
+    if(customSetterName){
+        SEL selector = sel_registerName(customSetterName);
+        free(customSetterName);
+
+        return selector;
+    } else {
+        const int MAX_LENGTH = 256;
+
+        const char *pname = property_getName(property);
+        char sname[MAX_LENGTH + 1];
+        int len =   snprintf(sname, MAX_LENGTH, "set%s:", pname);
+        NSCAssert(len < MAX_LENGTH, @"Property name too long!");
+
+        // Capitalize the name.
+        sname[3] = toupper(sname[3]);
+
+        return sel_registerName(sname);
+    }
+}
+
+
 -(CCNode*) nodeFromClassName:(NSString*)nodeClassName
 {
     Class nodeClass = NSClassFromString(nodeClassName);
@@ -1462,24 +1489,39 @@ static inline float readFloat(CCBReader *self)
         id target = NULL;
         if (memberVarAssignmentType == kCCBTargetTypeDocumentRoot) target = animationManager.rootNode;
         else if (memberVarAssignmentType == kCCBTargetTypeOwner) target = owner;
-        
+
+        const char *varName = [memberVarAssignmentName UTF8String];
         if (target)
         {
-            Ivar ivar = class_getInstanceVariable([target class],[memberVarAssignmentName UTF8String]);
-            if (ivar)
+            //Ivar ivar = class_getInstanceVariable([target class],[memberVarAssignmentName UTF8String]);
+            //if (ivar)
+            Class targetClass = [target class];
+            objc_property_t property = class_getProperty(targetClass, varName);
+
+            if(property)
             {
-                object_setIvar(target,ivar,node);
-                NSLog(@"Assign: %@", memberVarAssignmentName);
+                //object_setIvar(target,ivar,node);
+                typedef void (*Func)(id, SEL, id);
+                ((Func)objc_msgSend)(target, SelectorNameForProperty(property), node);
             }
             else
             {
-                NSLog(@"CCBReader: Couldn't find member variable: %@", memberVarAssignmentName);
+                //NSLog(@"CCBReader: Couldn't find member variable: %@", memberVarAssignmentName);
+                Ivar ivar = class_getInstanceVariable(targetClass, varName);
+                if (ivar)
+                {
+                    object_setIvar(target,ivar,node);
+                }
+                else
+                {
+                    NSLog(@"CCBReader: Couldn't find member variable: %@", memberVarAssignmentName);
+                }
             }
         }
     }
-    
+
     animatedProps = NULL;
-    
+
     // Read physics
     BOOL hasPhysicsBody = readBool(self);
     if (hasPhysicsBody)
